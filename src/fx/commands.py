@@ -133,8 +133,8 @@ def run(
     shell_input_fn=None,
     shell_banner: bool = True,
     shell_banner_text: str | None = None,
-    shell_title: str = "Functionals FX",
-    shell_description: str = "Manage Functionals projects, modules, and plugin structures.",
+    shell_title: str = "fx",
+    shell_description: str = "Manage back-end projects, modules, and plugin structures built with registers.",
     shell_colors: bool | None = None,
     shell_usage: bool = True,
 ) -> Any:
