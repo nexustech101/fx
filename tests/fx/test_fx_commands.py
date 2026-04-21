@@ -39,20 +39,12 @@ def test_fx_init_creates_structure_and_project_record(tmp_path: Path, monkeypatc
     project_root = tmp_path / "DemoProject"
     assert (project_root / "pyproject.toml").exists()
     assert (project_root / "README.md").exists()
-    assert (project_root / "src" / "app" / "__main__.py").exists()
-    assert (project_root / "src" / "app" / "todo.py").exists()
-    assert (project_root / "src" / "app" / "plugins" / "__init__.py").exists()
-    assert (project_root / "src" / "app" / "ops" / "__init__.py").exists()
-    assert (project_root / "src" / "app" / "ops" / "jobs" / "__init__.py").exists()
-    assert (project_root / "src" / "app" / "ops" / "jobs" / "heartbeat.py").exists()
-    assert (project_root / "src" / "app" / "ops" / "jobs" / "deploy.py").exists()
-    assert (project_root / "ops" / "workflows" / "cron" / "ops-heartbeat.cron").exists()
-    assert (project_root / "ops" / "workflows" / "ci" / "deploy-workflow.yml").exists()
-    assert (project_root / "ops" / "workflows" / "windows" / "ops-heartbeat.xml").exists()
-    assert (project_root / "ops" / "scripts" / "deploy.sh").exists()
-    assert (project_root / "tests" / "test_todo_cli.py").exists()
+    assert (project_root / "app" / "__main__.py").exists()
+    assert (project_root / "app" / "todo.py").exists()
+    assert (project_root / "app" / "plugins" / "__init__.py").exists()
+    assert (project_root / "tests" / "test_todo_automation.py").exists()
     assert (project_root / ".fx" / "fx.db").exists()
-    todo_content = (project_root / "src" / "app" / "todo.py").read_text(encoding="utf-8")
+    todo_content = (project_root / "app" / "todo.py").read_text(encoding="utf-8")
     assert "@cli.register(name=\"add\"" in todo_content
     assert "class TodoItem(BaseModel)" in todo_content
     assert "cli.load_plugins(\"app.plugins\"" in todo_content
@@ -72,11 +64,9 @@ def test_fx_init_cli_dot_uses_current_directory_and_app_package(
     result = run(["init", "cli", "."], print_result=False)
     assert f"Initialized cli project '{tmp_path.name}'" in result
 
-    assert (tmp_path / "src" / "app" / "__main__.py").exists()
-    assert (tmp_path / "src" / "app" / "todo.py").exists()
-    assert (tmp_path / "src" / "app" / "plugins" / "__init__.py").exists()
-    assert (tmp_path / "src" / "app" / "ops" / "jobs" / "heartbeat.py").exists()
-    assert (tmp_path / "ops" / "workflows" / "ci" / "deploy-workflow.yml").exists()
+    assert (tmp_path / "app" / "__main__.py").exists()
+    assert (tmp_path / "app" / "todo.py").exists()
+    assert (tmp_path / "app" / "plugins" / "__init__.py").exists()
 
 
 def test_fx_module_add_cli_structures_files_and_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -86,8 +76,8 @@ def test_fx_module_add_cli_structures_files_and_registry(tmp_path: Path, monkeyp
     result = run(["module", "add", "cli", "users"], print_result=False)
     assert "Structured cli module 'users'" in result
 
-    assert (tmp_path / "src" / "app" / "plugins" / "users" / "__init__.py").exists()
-    assert (tmp_path / "src" / "app" / "plugins" / "users" / "users.py").exists()
+    assert (tmp_path / "app" / "plugins" / "users" / "__init__.py").exists()
+    assert (tmp_path / "app" / "plugins" / "users" / "users.py").exists()
 
     module_list = run(["module", "list"], print_result=False)
     assert "users  (cli)  app.plugins.users" in module_list
@@ -103,7 +93,7 @@ def test_fx_plugin_link_creates_alias_and_health_passes(tmp_path: Path, monkeypa
     result = run(["plugin", "make", "math", "math_ops"], print_result=False)
     assert "Linked plugin 'math_ops' -> math" in result
 
-    link_file = tmp_path / "src" / "app" / "plugins" / "math_ops" / "__init__.py"
+    link_file = tmp_path / "app" / "plugins" / "math_ops" / "__init__.py"
     assert link_file.exists()
     assert "from math import *" in link_file.read_text(encoding="utf-8")
 
@@ -132,13 +122,11 @@ def test_fx_init_db_creates_db_structure(tmp_path: Path, monkeypatch: pytest.Mon
 
     project_root = tmp_path / "DataProject"
     assert (project_root / "pyproject.toml").exists()
-    assert (project_root / "src" / "app" / "api.py").exists()
-    assert (project_root / "src" / "app" / "models.py").exists()
-    assert (project_root / "src" / "app" / "plugins" / "__init__.py").exists()
-    assert (project_root / "src" / "app" / "ops" / "jobs" / "heartbeat.py").exists()
-    assert (project_root / "ops" / "workflows" / "cron" / "ops-heartbeat.cron").exists()
+    assert (project_root / "app" / "api.py").exists()
+    assert (project_root / "app" / "models.py").exists()
+    assert (project_root / "app" / "plugins" / "__init__.py").exists()
     assert (project_root / "tests" / "test_user_api.py").exists()
-    api_content = (project_root / "src" / "app" / "api.py").read_text(encoding="utf-8")
+    api_content = (project_root / "app" / "api.py").read_text(encoding="utf-8")
     assert "FastAPI" in api_content
     assert "@app.post(\"/users\"" in api_content
 
@@ -170,10 +158,10 @@ def test_fx_run_selects_cli_and_db_entrypoints(tmp_path: Path, monkeypatch: pyte
 
     assert calls
     assert calls[0][0][:3] == [sys.executable, "-m", "app"]
-    assert calls[0][1] == cli_root / "src"
+    assert calls[0][1] == cli_root
     assert calls[1][0][:4] == [sys.executable, "-m", "uvicorn", "app.api:app"]
     assert "--reload" in calls[1][0]
-    assert calls[1][1] == db_root / "src"
+    assert calls[1][1] == db_root
 
 
 def test_fx_install_builds_editable_install_commands(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -369,7 +357,7 @@ def test_fx_pull_syncs_plugins_and_updates_registry(tmp_path: Path, monkeypatch:
     assert "created=1" in result
     assert "skipped=1" in result
 
-    alpha_init = tmp_path / "src" / "app" / "plugins" / "alpha" / "__init__.py"
+    alpha_init = tmp_path / "app" / "plugins" / "alpha" / "__init__.py"
     assert alpha_init.exists()
     assert "VALUE='alpha'" in alpha_init.read_text(encoding="utf-8")
 
@@ -381,7 +369,7 @@ def test_fx_pull_force_overwrites_existing_plugins(tmp_path: Path, monkeypatch: 
     monkeypatch.chdir(tmp_path)
     run(["init", "DemoProject", "."], print_result=False)
 
-    existing = tmp_path / "src" / "app" / "plugins" / "users"
+    existing = tmp_path / "app" / "plugins" / "users"
     existing.mkdir(parents=True, exist_ok=True)
     (existing / "__init__.py").write_text("VALUE='local'\n", encoding="utf-8")
 
@@ -510,40 +498,69 @@ def test_fx_interactive_shell_colors_version_line(capsys: pytest.CaptureFixture[
 
 
 def _write_cron_jobs_module(root: Path) -> None:
-    (root / "src" / "app" / "jobs.py").write_text(
+    content = "\n".join(
+        [
+            "from __future__ import annotations",
+            "import registers.cron as cron",
+            "",
+            "@cron.job(",
+            "    name='nightly-build',",
+            "    trigger=cron.cron('0 2 * * *'),",
+            "    target='github_actions',",
+            "    deployment_file='.github/workflows/nightly-build.yml',",
+            "    retry_policy='exponential',",
+            "    retry_max_attempts=5,",
+            "    retry_backoff_seconds=10,",
+            "    retry_max_backoff_seconds=120,",
+            "    retry_jitter_seconds=2,",
+            ")",
+            "def nightly_build() -> str:",
+            "    return 'build-ok'",
+            "",
+            "@cron.job(",
+            "    name='sync-cache',",
+            "    trigger=cron.event('manual'),",
+            "    target='local_async',",
+            "    retry_policy='fixed',",
+            "    retry_max_attempts=3,",
+            "    retry_backoff_seconds=2,",
+            ")",
+            "def sync_cache(payload: dict | None = None) -> str:",
+            "    return f\"sync:{payload}\"",
+        ]
+    )
+
+    # Current fx scaffold uses root-level app/, while installed registers.cron
+    # discovery still prefers src/app. Write both for compatibility in tests.
+    app_pkg = root / "app"
+    app_pkg.mkdir(parents=True, exist_ok=True)
+    (app_pkg / "__init__.py").touch()
+    (app_pkg / "jobs.py").write_text(content, encoding="utf-8")
+
+    legacy_pkg = root / "src" / "app"
+    legacy_pkg.mkdir(parents=True, exist_ok=True)
+    (legacy_pkg / "__init__.py").touch()
+    (legacy_pkg / "jobs.py").write_text(content, encoding="utf-8")
+
+
+def _write_workflow_file(root: Path) -> Path:
+    workflow_file = root / "ops" / "workflows" / "ci" / "deploy-workflow.yml"
+    workflow_file.parent.mkdir(parents=True, exist_ok=True)
+    workflow_file.write_text(
         "\n".join(
             [
-                "from __future__ import annotations",
-                "import registers.cron as cron",
-                "",
-                "@cron.job(",
-                "    name='nightly-build',",
-                "    trigger=cron.cron('0 2 * * *'),",
-                "    target='github_actions',",
-                "    deployment_file='.github/workflows/nightly-build.yml',",
-                "    retry_policy='exponential',",
-                "    retry_max_attempts=5,",
-                "    retry_backoff_seconds=10,",
-                "    retry_max_backoff_seconds=120,",
-                "    retry_jitter_seconds=2,",
-                ")",
-                "def nightly_build() -> str:",
-                "    return 'build-ok'",
-                "",
-                "@cron.job(",
-                "    name='sync-cache',",
-                "    trigger=cron.event('manual'),",
-                "    target='local_async',",
-                "    retry_policy='fixed',",
-                "    retry_max_attempts=3,",
-                "    retry_backoff_seconds=2,",
-                ")",
-                "def sync_cache(payload: dict | None = None) -> str:",
-                "    return f\"sync:{payload}\"",
+                "name: deploy-workflow",
+                "on:",
+                "  workflow_dispatch: {}",
+                "jobs:",
+                "  deploy:",
+                "    runs-on: ubuntu-latest",
+                "    steps: []",
             ]
         ),
         encoding="utf-8",
     )
+    return workflow_file
 
 
 def test_fx_cron_jobs_and_trigger(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -647,9 +664,7 @@ def test_fx_cron_workspace_and_register_command_workflow(
     workspace = run(["cron", "workspace", "."], print_result=False)
     assert "fx Cron Workspace Result" in workspace
     assert (tmp_path / "ops" / "workflows" / "ci").exists()
-    assert (tmp_path / "src" / "app" / "ops" / "jobs").exists()
-
-    workflow_file = tmp_path / "ops" / "workflows" / "ci" / "deploy-workflow.yml"
+    workflow_file = _write_workflow_file(tmp_path)
     assert workflow_file.exists()
 
     registered = run(
@@ -688,7 +703,7 @@ def test_fx_cron_run_workflow_job_mode_queues_event(
     run(["init", "DemoProject", "."], print_result=False)
     _write_cron_jobs_module(tmp_path)
 
-    workflow_file = tmp_path / "ops" / "workflows" / "ci" / "deploy-workflow.yml"
+    workflow_file = _write_workflow_file(tmp_path)
     run(
         [
             "cron",
@@ -724,7 +739,7 @@ def test_fx_cron_run_workflow_command_mode_records_run(
     monkeypatch.chdir(tmp_path)
     run(["init", "DemoProject", "."], print_result=False)
 
-    workflow_file = tmp_path / "ops" / "workflows" / "ci" / "deploy-workflow.yml"
+    workflow_file = _write_workflow_file(tmp_path)
     run(
         [
             "cron",
@@ -755,4 +770,3 @@ def test_fx_cron_run_workflow_command_mode_records_run(
     assert runs
     assert runs[0].job_name == "workflow:command-flow"
     assert runs[0].status == "success"
-

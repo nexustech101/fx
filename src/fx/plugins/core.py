@@ -16,6 +16,7 @@ from fx.structure import (
     create_plugin_link,
     discover_local_plugins,
     discover_project_package,
+    discover_project_package_dir,
     init_project_layout,
     normalize_identifier,
     resolve_plugin_import_base,
@@ -108,11 +109,11 @@ def status(root: str = ".") -> str:
     plugins = plugin_registry(root_path).filter(project_root=str(root_path), order_by="alias")
     local_plugins = discover_local_plugins(root_path)
     package_name = discover_project_package(root_path)
+    package_dir = discover_project_package_dir(root_path)
     plugin_layout = resolve_plugin_layout(root_path)
-    src_root = root_path / "src"
-    todo_file = src_root / package_name / "todo.py" if package_name else None
-    api_file = src_root / package_name / "api.py" if package_name else None
-    models_file = src_root / package_name / "models.py" if package_name else None
+    todo_file = package_dir / "todo.py" if package_dir is not None else None
+    api_file = package_dir / "api.py" if package_dir is not None else None
+    models_file = package_dir / "models.py" if package_dir is not None else None
 
     registered_aliases = [plugin.alias for plugin in plugins]
     missing_on_disk = sorted(set(registered_aliases) - set(local_plugins))
@@ -123,7 +124,8 @@ def status(root: str = ".") -> str:
         f"Project record: {'present' if project else 'missing'}",
         f"Project type: {getattr(project, 'project_type', 'unknown') if project else 'unknown'}",
         f"pyproject.toml: {'present' if (root_path / 'pyproject.toml').exists() else 'missing'}",
-        f"src package: {package_name or 'missing'}",
+        f"package: {package_name or 'missing'}",
+        f"package root: {package_dir if package_dir is not None else 'missing'}",
         f"legacy app.py: {'present' if (root_path / 'app.py').exists() else 'missing'}",
         f"todo.py: {'present' if (todo_file and todo_file.exists()) else 'missing'}",
         f"api.py: {'present' if (api_file and api_file.exists()) else 'missing'}",

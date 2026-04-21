@@ -7,7 +7,7 @@ from fx.commands import argument, option, register
 from fx.state import operation_registry, project_registry, record_operation, resolve_root
 from fx.structure import (
     discover_local_plugins,
-    discover_project_package,
+    discover_project_package_dir,
     resolve_plugin_import_base,
     resolve_plugin_layout,
 )
@@ -22,26 +22,26 @@ def health(root: str = ".") -> str:
     failures: list[str] = []
     project = project_registry(root_path).get(root_path=str(root_path))
     project_type = getattr(project, "project_type", "")
-    package_name = discover_project_package(root_path)
+    package_dir = discover_project_package_dir(root_path)
     import_base = resolve_plugin_import_base(root_path)
     plugin_layout = resolve_plugin_layout(root_path)
     has_legacy_cli = (root_path / "app.py").exists()
     has_legacy_db = (root_path / "models.py").exists()
-    has_package_cli = bool(package_name and (root_path / "src" / package_name / "todo.py").exists())
+    has_package_cli = bool(package_dir is not None and (package_dir / "todo.py").exists())
     has_package_db = bool(
-        package_name
-        and (root_path / "src" / package_name / "models.py").exists()
-        and (root_path / "src" / package_name / "api.py").exists()
+        package_dir is not None
+        and (package_dir / "models.py").exists()
+        and (package_dir / "api.py").exists()
     )
     if not project_type:
         project_type = "db" if (has_legacy_db or has_package_db) and not (has_legacy_cli or has_package_cli) else "cli"
 
     if project_type == "cli":
         if not (has_legacy_cli or has_package_cli):
-            failures.append("Missing CLI starter (app.py or src/<package>/todo.py).")
+            failures.append("Missing CLI starter (app.py or <package>/todo.py).")
     elif project_type == "db":
         if not (has_legacy_db or has_package_db):
-            failures.append("Missing DB starter (models.py or src/<package>/models.py + api.py).")
+            failures.append("Missing DB starter (models.py or <package>/models.py + api.py).")
     else:
         failures.append(f"Unsupported project type '{project_type}'.")
 
@@ -109,4 +109,3 @@ def history(limit: int = 20, root: str = ".") -> str:
         if row.message:
             lines.append(f"      {row.message}")
     return "\n".join(lines)
-

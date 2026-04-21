@@ -21,14 +21,6 @@ from fx.templates import (
     DB_PYPROJECT_TEMPLATE,
     DB_README_TEMPLATE,
     DB_TEST_TEMPLATE,
-    OPS_CI_WORKFLOW_TEMPLATE,
-    OPS_CRON_WORKFLOW_TEMPLATE,
-    OPS_DEPLOY_JOB_TEMPLATE,
-    OPS_HEARTBEAT_JOB_TEMPLATE,
-    OPS_JOBS_INIT_TEMPLATE,
-    OPS_PACKAGE_INIT_TEMPLATE,
-    OPS_SCRIPT_TEMPLATE,
-    OPS_WINDOWS_WORKFLOW_TEMPLATE,
     PACKAGE_INIT_TEMPLATE,
     render_template,
 )
@@ -107,27 +99,16 @@ def init_project_layout(*, root: Path, project_name: str, project_type: str, for
     updated: list[Path] = []
     skipped: list[Path] = []
 
-    # New structured projects always use a stable import package: src/app
+    # New structured projects always use a stable root package: app/
     pkg_name = "app"
     dist_name = distribution_name(project_name)
     script_name = dist_name
-    package_root = root / "src" / pkg_name
+    package_root = root / pkg_name
     plugins_package = package_root / "plugins"
-    ops_package = package_root / "ops"
-    ops_jobs_package = ops_package / "jobs"
 
-    ensure_directory(root / "src", created=created, skipped=skipped)
     ensure_directory(root / "tests", created=created, skipped=skipped)
     ensure_directory(package_root, created=created, skipped=skipped)
     ensure_package(plugins_package, created=created, skipped=skipped)
-    ensure_directory(root / "ops", created=created, skipped=skipped)
-    ensure_directory(root / "ops" / "workflows", created=created, skipped=skipped)
-    ensure_directory(root / "ops" / "workflows" / "cron", created=created, skipped=skipped)
-    ensure_directory(root / "ops" / "workflows" / "windows", created=created, skipped=skipped)
-    ensure_directory(root / "ops" / "workflows" / "ci", created=created, skipped=skipped)
-    ensure_directory(root / "ops" / "scripts", created=created, skipped=skipped)
-    ensure_directory(ops_package, created=created, skipped=skipped)
-    ensure_directory(ops_jobs_package, created=created, skipped=skipped)
     (root / ".fx").mkdir(parents=True, exist_ok=True)
 
     shared_values = {
@@ -141,15 +122,7 @@ def init_project_layout(*, root: Path, project_name: str, project_type: str, for
 
     files: dict[Path, str] = {
         root / ".gitignore": COMMON_GITIGNORE_TEMPLATE,
-        root / "src" / pkg_name / "__init__.py": render_template(PACKAGE_INIT_TEMPLATE, **shared_values),
-        root / "src" / pkg_name / "ops" / "__init__.py": render_template(OPS_PACKAGE_INIT_TEMPLATE, **shared_values),
-        root / "src" / pkg_name / "ops" / "jobs" / "__init__.py": render_template(OPS_JOBS_INIT_TEMPLATE, **shared_values),
-        root / "src" / pkg_name / "ops" / "jobs" / "heartbeat.py": render_template(OPS_HEARTBEAT_JOB_TEMPLATE, **shared_values),
-        root / "src" / pkg_name / "ops" / "jobs" / "deploy.py": render_template(OPS_DEPLOY_JOB_TEMPLATE, **shared_values),
-        root / "ops" / "scripts" / "deploy.sh": render_template(OPS_SCRIPT_TEMPLATE, **shared_values),
-        root / "ops" / "workflows" / "cron" / "ops-heartbeat.cron": render_template(OPS_CRON_WORKFLOW_TEMPLATE, **shared_values),
-        root / "ops" / "workflows" / "ci" / "deploy-workflow.yml": render_template(OPS_CI_WORKFLOW_TEMPLATE, **shared_values),
-        root / "ops" / "workflows" / "windows" / "ops-heartbeat.xml": render_template(OPS_WINDOWS_WORKFLOW_TEMPLATE, **shared_values),
+        root / pkg_name / "__init__.py": render_template(PACKAGE_INIT_TEMPLATE, **shared_values),
     }
 
     entry_path: Path | None = None
@@ -158,24 +131,24 @@ def init_project_layout(*, root: Path, project_name: str, project_type: str, for
             {
                 root / "pyproject.toml": render_template(CLI_PYPROJECT_TEMPLATE, **shared_values),
                 root / "README.md": render_template(CLI_README_TEMPLATE, **shared_values),
-                root / "src" / pkg_name / "__main__.py": render_template(CLI_MAIN_TEMPLATE, **shared_values),
-                root / "src" / pkg_name / "todo.py": render_template(CLI_TODO_TEMPLATE, **shared_values),
-                root / "tests" / "test_todo_cli.py": render_template(CLI_TEST_TEMPLATE, **shared_values),
+                root / pkg_name / "__main__.py": render_template(CLI_MAIN_TEMPLATE, **shared_values),
+                root / pkg_name / "todo.py": render_template(CLI_TODO_TEMPLATE, **shared_values),
+                root / "tests" / "test_todo_automation.py": render_template(CLI_TEST_TEMPLATE, **shared_values),
             }
         )
-        entry_path = root / "src" / pkg_name / "todo.py"
+        entry_path = root / pkg_name / "todo.py"
     elif project_type == "db":
         files.update(
             {
                 root / "pyproject.toml": render_template(DB_PYPROJECT_TEMPLATE, **shared_values),
                 root / "README.md": render_template(DB_README_TEMPLATE, **shared_values),
-                root / "src" / pkg_name / "__main__.py": render_template(DB_MAIN_TEMPLATE, **shared_values),
-                root / "src" / pkg_name / "models.py": render_template(DB_MODELS_TEMPLATE, **shared_values),
-                root / "src" / pkg_name / "api.py": render_template(DB_API_TEMPLATE, **shared_values),
+                root / pkg_name / "__main__.py": render_template(DB_MAIN_TEMPLATE, **shared_values),
+                root / pkg_name / "models.py": render_template(DB_MODELS_TEMPLATE, **shared_values),
+                root / pkg_name / "api.py": render_template(DB_API_TEMPLATE, **shared_values),
                 root / "tests" / "test_user_api.py": render_template(DB_TEST_TEMPLATE, **shared_values),
             }
         )
-        entry_path = root / "src" / pkg_name / "api.py"
+        entry_path = root / pkg_name / "api.py"
     else:
         raise ValueError("project_type must be either 'cli' or 'db'.")
 
@@ -305,30 +278,52 @@ def discover_local_plugins(root: Path) -> list[str]:
 
 
 def discover_project_package(root: Path) -> str | None:
+    package_dir = discover_project_package_dir(root)
+    if package_dir is not None:
+        return package_dir.name
+    return None
+
+
+def discover_project_package_dir(root: Path) -> Path | None:
+    # Preferred current layout: ./app
+    root_app = root / "app" / "__init__.py"
+    if root_app.exists():
+        return root / "app"
+
+    # Legacy structured layout: ./src/app
     src_root = root / "src"
+    src_app = src_root / "app" / "__init__.py"
+    if src_app.exists():
+        return src_root / "app"
+
+    # Generic fallback under root for one package directory.
+    root_candidates = sorted(
+        child
+        for child in root.iterdir()
+        if child.is_dir() and (child / "__init__.py").exists()
+    ) if root.exists() else []
+    if len(root_candidates) == 1:
+        return root_candidates[0]
+
+    # Generic fallback under ./src for one package directory.
     if not src_root.exists():
         return None
-
-    app_pkg = src_root / "app" / "__init__.py"
-    if app_pkg.exists():
-        return "app"
-
-    candidates = sorted(
-        child.name
+    src_candidates = sorted(
+        child
         for child in src_root.iterdir()
         if child.is_dir() and (child / "__init__.py").exists()
     )
-    if len(candidates) == 1:
-        return candidates[0]
+    if len(src_candidates) == 1:
+        return src_candidates[0]
     return None
 
 
 def resolve_plugin_layout(root: Path) -> PluginLayout:
-    pkg_name = discover_project_package(root)
-    if pkg_name:
-        package_plugins = root / "src" / pkg_name / "plugins"
+    package_dir = discover_project_package_dir(root)
+    if package_dir is not None:
+        package_plugins = package_dir / "plugins"
         if package_plugins.exists() and (package_plugins / "__init__.py").exists():
-            return PluginLayout(package_plugins, f"{pkg_name}.plugins")
+            return PluginLayout(package_plugins, f"{package_dir.name}.plugins")
 
     return PluginLayout(root / "plugins", "plugins")
 

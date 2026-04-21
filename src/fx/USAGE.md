@@ -44,13 +44,15 @@ python -m fx --help
 
 ## Quick Start
 
-Create and operate a Functionals CLI project:
+Create and operate a todo-focused Functionals CLI project (project name is arbitrary):
 
 ```bash
-fx init cli MyService
-fx status MyService
-fx health MyService
-fx run MyService
+fx init cli upwork
+fx status upwork
+fx health upwork
+python -m app add "Grocery Shopping" "Bread, milk, eggs, butter"
+python -m app list
+fx run upwork
 ```
 
 Create and operate a Functionals DB/API project:
@@ -69,24 +71,16 @@ fx run DataService --host 0.0.0.0 --port 8000
 pyproject.toml
 README.md
 .gitignore
-src/app/__init__.py
-src/app/__main__.py
-src/app/todo.py
-src/app/plugins/__init__.py
-src/app/ops/__init__.py
-src/app/ops/jobs/__init__.py
-src/app/ops/jobs/heartbeat.py
-src/app/ops/jobs/deploy.py
-ops/scripts/deploy.sh
-ops/workflows/cron/ops-heartbeat.cron
-ops/workflows/ci/deploy-workflow.yml
-ops/workflows/windows/ops-heartbeat.xml
-tests/test_todo_cli.py
+app/__init__.py
+app/__main__.py
+app/todo.py
+app/plugins/__init__.py
+tests/test_todo_automation.py
 .fx/fx.db
 ```
 
 `fx init db` creates a similar structure, replacing CLI app files with
-`src/app/api.py` and `src/app/models.py`.
+`app/api.py` and `app/models.py`.
 
 ## Core Commands
 
@@ -150,7 +144,7 @@ Tracked records include:
 ## Notes
 
 - `fx` manages Functionals projects; it is not a replacement for the framework runtime.
-- New projects use `src/app` as the application package by default.
+- New projects use `app/` at the project root as the application package by default.
 - `module_name` and `alias` are normalized to valid Python identifiers.
 - `health` verifies core project structure and plugin importability.
 

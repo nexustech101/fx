@@ -31,11 +31,8 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 include = ["__PACKAGE_NAME__*"]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
 """
 
 
@@ -65,11 +62,8 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 include = ["__PACKAGE_NAME__*"]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
 """
 
 
