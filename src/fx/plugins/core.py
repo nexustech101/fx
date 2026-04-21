@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fx.commands import fx_VERSION, argument, option, register
+from fx.commands import FX_VERSION, argument, option, register
 from fx.state import (
     module_registry,
     plugin_registry,
@@ -361,4 +361,4 @@ def plugin_manage(
 @option("--version")
 @option("-V")
 def show_version() -> str:
-    return f"fx {fx_VERSION}"
+    return f"fx {FX_VERSION}"

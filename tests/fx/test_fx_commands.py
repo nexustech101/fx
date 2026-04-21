@@ -17,7 +17,7 @@ from registers.cron.state import (
     cron_workflow_registry,
 )
 from fx import run
-from fx.commands import fx_VERSION, main as fx_main
+from fx.commands import FX_VERSION, main as fx_main
 from fx.state import clear_state_caches
 
 
@@ -446,14 +446,14 @@ def test_fx_history_includes_new_runtime_commands(tmp_path: Path, monkeypatch: p
 
 def test_fx_version_option_returns_current_version() -> None:
     result = run(["--version"], print_result=False)
-    assert result == f"fx {fx_VERSION}"
+    assert result == f"fx {FX_VERSION}"
 
 
 def test_fx_help_includes_version_line(capsys: pytest.CaptureFixture[str]) -> None:
     run(["--help"], print_result=False)
     out = capsys.readouterr().out
     assert "fx" in out
-    assert f"Version: {fx_VERSION}" in out
+    assert f"Version: {FX_VERSION}" in out
 
 
 def test_fx_help_uses_grouped_module_and_plugin_commands(capsys: pytest.CaptureFixture[str]) -> None:
@@ -482,14 +482,14 @@ def test_fx_interactive_shell_prints_version_line(capsys: pytest.CaptureFixture[
     )
     out = capsys.readouterr().out
     assert "fx" in out
-    assert f"Version: {fx_VERSION}" in out
+    assert f"Version: {FX_VERSION}" in out
 
 
 def test_fx_main_version_prints_once(capsys: pytest.CaptureFixture[str]) -> None:
     exit_code = fx_main(["--version"])
     out = capsys.readouterr().out.strip().splitlines()
     assert exit_code == 0
-    assert out == [f"fx {fx_VERSION}"]
+    assert out == [f"fx {FX_VERSION}"]
 
 
 def test_fx_interactive_shell_colors_version_line(capsys: pytest.CaptureFixture[str]) -> None:
@@ -506,7 +506,7 @@ def test_fx_interactive_shell_colors_version_line(capsys: pytest.CaptureFixture[
         shell_colors=True,
     )
     out = capsys.readouterr().out
-    assert f"\x1b[32mVersion: {fx_VERSION}\x1b[0m" in out
+    assert f"\x1b[32mVersion: {FX_VERSION}\x1b[0m" in out
 
 
 def _write_cron_jobs_module(root: Path) -> None:
