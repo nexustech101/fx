@@ -15,7 +15,7 @@ It is focused on developer and DevOps workflows around Functionals apps:
 still manages projects built on the Functionals runtime (`registers`).
 
 Runtime package note: the framework package/import namespace is now `registers`
-(renamed from `decorates`/`registers`).
+(renamed from `registers`/`registers`).
 
 ## Install
 

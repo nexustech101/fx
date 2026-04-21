@@ -17,7 +17,7 @@ from registers.cron.state import (
     cron_workflow_registry,
 )
 from fx import run
-from fx.commands import FX_VERSION, main as fx_main
+from fx.commands import fx_VERSION, main as fx_main
 from fx.state import clear_state_caches
 
 
@@ -446,14 +446,14 @@ def test_fx_history_includes_new_runtime_commands(tmp_path: Path, monkeypatch: p
 
 def test_fx_version_option_returns_current_version() -> None:
     result = run(["--version"], print_result=False)
-    assert result == f"fx {FX_VERSION}"
+    assert result == f"fx {fx_VERSION}"
 
 
 def test_fx_help_includes_version_line(capsys: pytest.CaptureFixture[str]) -> None:
     run(["--help"], print_result=False)
     out = capsys.readouterr().out
-    assert "Functionals FX" in out
-    assert f"Version: {FX_VERSION}" in out
+    assert "fx" in out
+    assert f"Version: {fx_VERSION}" in out
 
 
 def test_fx_help_uses_grouped_module_and_plugin_commands(capsys: pytest.CaptureFixture[str]) -> None:
@@ -481,15 +481,15 @@ def test_fx_interactive_shell_prints_version_line(capsys: pytest.CaptureFixture[
         shell_colors=False,
     )
     out = capsys.readouterr().out
-    assert "Functionals FX" in out
-    assert f"Version: {FX_VERSION}" in out
+    assert "fx" in out
+    assert f"Version: {fx_VERSION}" in out
 
 
 def test_fx_main_version_prints_once(capsys: pytest.CaptureFixture[str]) -> None:
     exit_code = fx_main(["--version"])
     out = capsys.readouterr().out.strip().splitlines()
     assert exit_code == 0
-    assert out == [f"fx {FX_VERSION}"]
+    assert out == [f"fx {fx_VERSION}"]
 
 
 def test_fx_interactive_shell_colors_version_line(capsys: pytest.CaptureFixture[str]) -> None:
@@ -506,7 +506,7 @@ def test_fx_interactive_shell_colors_version_line(capsys: pytest.CaptureFixture[
         shell_colors=True,
     )
     out = capsys.readouterr().out
-    assert f"\x1b[32mVersion: {FX_VERSION}\x1b[0m" in out
+    assert f"\x1b[32mVersion: {fx_VERSION}\x1b[0m" in out
 
 
 def _write_cron_jobs_module(root: Path) -> None:
@@ -552,7 +552,7 @@ def test_fx_cron_jobs_and_trigger(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     _write_cron_jobs_module(tmp_path)
 
     jobs = run(["cron", "jobs", "."], print_result=False)
-    assert "FX Cron Jobs Result" in jobs
+    assert "fx Cron Jobs Result" in jobs
     assert "nightly-build" in jobs
     assert "sync-cache" in jobs
     assert "retry=exponential" in jobs
@@ -563,7 +563,7 @@ def test_fx_cron_jobs_and_trigger(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
         ["cron", "trigger", "sync-cache", ".", "--payload", '{"hello":"world"}'],
         print_result=False,
     )
-    assert "FX Cron Trigger Result" in trigger
+    assert "fx Cron Trigger Result" in trigger
     events = cron_event_registry(tmp_path).filter(project_root=str(tmp_path), order_by="-id", limit=1)
     assert events
     assert events[0].job_name == "sync-cache"
@@ -579,7 +579,7 @@ def test_fx_cron_status_surfaces_dead_letter_and_failure_counters(
     _write_cron_jobs_module(tmp_path)
 
     status = run(["cron", "status", "."], print_result=False)
-    assert "FX Cron Status Result" in status
+    assert "fx Cron Status Result" in status
     assert "Failed events:" in status
     assert "Dead-letter events:" in status
 
@@ -593,12 +593,12 @@ def test_fx_cron_generate_and_apply_generate_only_target(
     _write_cron_jobs_module(tmp_path)
 
     generated = run(["cron", "generate", ".", "--target", "github_actions"], print_result=False)
-    assert "FX Cron Generate Result" in generated
+    assert "fx Cron Generate Result" in generated
     workflow = tmp_path / ".github" / "workflows" / "nightly-build.yml"
     assert workflow.exists()
 
     applied = run(["cron", "apply", ".", "--target", "github_actions"], print_result=False)
-    assert "FX Cron Apply Result" in applied
+    assert "fx Cron Apply Result" in applied
     assert "generate-only" in applied
 
 
@@ -618,7 +618,7 @@ def test_fx_cron_start_and_stop_background_mode(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr("fx.plugins.cron._pid_is_alive", _fake_is_alive)
 
     started = run(["cron", "start", "."], print_result=False)
-    assert "FX Cron Start Result" in started
+    assert "fx Cron Start Result" in started
     assert "PID: 43210" in started
 
     runtime = cron_runtime_registry(tmp_path).get(project_root=str(tmp_path))
@@ -633,7 +633,7 @@ def test_fx_cron_start_and_stop_background_mode(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr("fx.plugins.cron._wait_for_pid_exit", lambda _pid: True)
 
     stopped = run(["cron", "stop", "."], print_result=False)
-    assert "FX Cron Stop Result" in stopped
+    assert "fx Cron Stop Result" in stopped
     assert "Status: success" in stopped
 
 
@@ -645,7 +645,7 @@ def test_fx_cron_workspace_and_register_command_workflow(
     run(["init", "DemoProject", "."], print_result=False)
 
     workspace = run(["cron", "workspace", "."], print_result=False)
-    assert "FX Cron Workspace Result" in workspace
+    assert "fx Cron Workspace Result" in workspace
     assert (tmp_path / "ops" / "workflows" / "ci").exists()
     assert (tmp_path / "src" / "app" / "ops" / "jobs").exists()
 
@@ -669,14 +669,14 @@ def test_fx_cron_workspace_and_register_command_workflow(
         ],
         print_result=False,
     )
-    assert "FX Cron Register Result" in registered
+    assert "fx Cron Register Result" in registered
     rows = cron_workflow_registry(tmp_path).filter(project_root=str(tmp_path), order_by="name")
     assert rows
     assert rows[0].name == "deploy-workflow"
     assert rows[0].command == "echo deploy"
 
     listed = run(["cron", "workflows", "."], print_result=False)
-    assert "FX Cron Workflows Result" in listed
+    assert "fx Cron Workflows Result" in listed
     assert "deploy-workflow" in listed
 
 
@@ -709,7 +709,7 @@ def test_fx_cron_run_workflow_job_mode_queues_event(
         ["cron", "run-workflow", "deploy-flow", ".", "--payload", '{"env":"prod"}'],
         print_result=False,
     )
-    assert "FX Cron Run Workflow Result" in result
+    assert "fx Cron Run Workflow Result" in result
     assert "Mode: job" in result
     events = cron_event_registry(tmp_path).filter(project_root=str(tmp_path), order_by="-id", limit=1)
     assert events
@@ -747,7 +747,7 @@ def test_fx_cron_run_workflow_command_mode_records_run(
     monkeypatch.setattr("registers.cron.workspace.subprocess.run", _fake_run)
 
     result = run(["cron", "run-workflow", "command-flow", "."], print_result=False)
-    assert "FX Cron Run Workflow Result" in result
+    assert "fx Cron Run Workflow Result" in result
     assert "Mode: command" in result
     assert "Exit code: 0" in result
 

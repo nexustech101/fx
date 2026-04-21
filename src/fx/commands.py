@@ -1,7 +1,7 @@
 """
-Public FX command surface.
+Public fx command surface.
 
-This module owns the FX command registry and runtime entrypoints. Command
+This module owns the fx command registry and runtime entrypoints. Command
 implementations are split into plugin modules under ``fx.plugins``.
 """
 
@@ -22,7 +22,7 @@ except ImportError:
     MISSING = object()
 
 _registry = CommandRegistry()
-_FX_DISTRIBUTION_NAME = "fx-tool"
+_fx_DISTRIBUTION_NAME = "fx-tool"
 _PLUGINS_PACKAGE = "fx.plugins"
 _REQUIRED_COMMANDS = frozenset(
     {
@@ -47,7 +47,7 @@ _plugin_load_error: Exception | None = None
 
 def _resolve_fx_version() -> str:
     try:
-        return resolve_distribution_version(_FX_DISTRIBUTION_NAME)
+        return resolve_distribution_version(_fx_DISTRIBUTION_NAME)
     except PackageNotFoundError:
         return "dev"
 
@@ -103,20 +103,20 @@ def ensure_plugins_loaded() -> None:
     if _plugins_loaded:
         return
     if _plugin_load_error is not None:
-        raise RuntimeError("FX command plugins failed to load.") from _plugin_load_error
+        raise RuntimeError("fx command plugins failed to load.") from _plugin_load_error
 
     with _plugins_lock:
         if _plugins_loaded:
             return
         if _plugin_load_error is not None:
-            raise RuntimeError("FX command plugins failed to load.") from _plugin_load_error
+            raise RuntimeError("fx command plugins failed to load.") from _plugin_load_error
 
         try:
             load_plugins(_PLUGINS_PACKAGE, _registry)
             missing = sorted(name for name in _REQUIRED_COMMANDS if not _registry.has(name))
             if missing:
                 raise RuntimeError(
-                    "FX command plugins loaded incompletely. Missing commands: "
+                    "fx command plugins loaded incompletely. Missing commands: "
                     + ", ".join(missing)
                 )
             _plugins_loaded = True

@@ -119,7 +119,7 @@ def run_project(
         message="Application command executed successfully.",
     )
     return render_runtime_summary(
-        "FX Run Result",
+        "fx Run Result",
         fields=[
             ("Status", "success"),
             ("Project", str(root_path)),
@@ -183,7 +183,7 @@ def install_project(
         message="Editable install completed successfully.",
     )
     return render_runtime_summary(
-        "FX Install Result",
+        "fx Install Result",
         fields=[
             ("Status", "success"),
             ("Project", str(root_path)),
@@ -283,7 +283,7 @@ def update_project(
         message=f"Updated package '{pkg}' from source '{source}'.",
     )
     return render_runtime_summary(
-        "FX Update Result",
+        "fx Update Result",
         fields=[
             ("Status", "success"),
             ("Project", str(root_path)),
@@ -398,7 +398,7 @@ def pull_plugins(
         )
 
         return render_runtime_summary(
-            "FX Pull Result",
+            "fx Pull Result",
             fields=[
                 ("Status", "success"),
                 ("Project", str(root_path)),

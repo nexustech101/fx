@@ -139,7 +139,7 @@ def cron_manage(
                     message=f"cron start foreground completed (jobs={summary.jobs}).",
                 )
                 return render_runtime_summary(
-                    "FX Cron Start Result",
+                    "fx Cron Start Result",
                     fields=[
                         ("Status", "success"),
                         ("Mode", "foreground"),
@@ -155,7 +155,7 @@ def cron_manage(
             runtime = cron_runtime_registry(root_path).get(project_root=str(root_path))
             if runtime is not None and runtime.status == "running" and _pid_is_alive(runtime.pid):
                 return render_runtime_summary(
-                    "FX Cron Start Result",
+                    "fx Cron Start Result",
                     fields=[
                         ("Status", "success"),
                         ("Mode", "background"),
@@ -187,7 +187,7 @@ def cron_manage(
             )
 
             return render_runtime_summary(
-                "FX Cron Start Result",
+                "fx Cron Start Result",
                 fields=[
                     ("Status", "success"),
                     ("Mode", "background"),
@@ -211,7 +211,7 @@ def cron_manage(
                     message="Cron daemon not running.",
                 )
                 return render_runtime_summary(
-                    "FX Cron Stop Result",
+                    "fx Cron Stop Result",
                     fields=[
                         ("Status", "success"),
                         ("Project", str(root_path)),
@@ -243,7 +243,7 @@ def cron_manage(
                 raise RuntimeError(message)
 
             return render_runtime_summary(
-                "FX Cron Stop Result",
+                "fx Cron Stop Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),
@@ -265,7 +265,7 @@ def cron_manage(
                 ),
             )
             return render_runtime_summary(
-                "FX Cron Workspace Result",
+                "fx Cron Workspace Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),
@@ -301,7 +301,7 @@ def cron_manage(
                 message=f"Registered workflow '{row.name}'.",
             )
             return render_runtime_summary(
-                "FX Cron Register Result",
+                "fx Cron Register Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),
@@ -317,7 +317,7 @@ def cron_manage(
             rows = list_cron_workflows(root_path)
             if not rows:
                 return render_runtime_summary(
-                    "FX Cron Workflows Result",
+                    "fx Cron Workflows Result",
                     fields=[
                         ("Status", "success"),
                         ("Project", str(root_path)),
@@ -325,7 +325,7 @@ def cron_manage(
                     ],
                 )
             lines = [
-                "FX Cron Workflows Result",
+                "fx Cron Workflows Result",
                 "Status: success",
                 f"Project: {root_path}",
                 "Workflows:",
@@ -356,7 +356,7 @@ def cron_manage(
                 message=result.message,
             )
             return render_runtime_summary(
-                "FX Cron Run Workflow Result",
+                "fx Cron Run Workflow Result",
                 fields=[
                     ("Status", result.status),
                     ("Project", str(root_path)),
@@ -392,7 +392,7 @@ def cron_manage(
                 runtime_status = "running" if running else runtime.status
 
             return render_runtime_summary(
-                "FX Cron Status Result",
+                "fx Cron Status Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),
@@ -414,7 +414,7 @@ def cron_manage(
             rows = cron_job_registry(root_path).filter(project_root=str(root_path), order_by="name")
             if not rows:
                 return render_runtime_summary(
-                    "FX Cron Jobs Result",
+                    "fx Cron Jobs Result",
                     fields=[
                         ("Status", "success"),
                         ("Project", str(root_path)),
@@ -426,7 +426,7 @@ def cron_manage(
                 )
 
             lines = [
-                "FX Cron Jobs Result",
+                "fx Cron Jobs Result",
                 "Status: success",
                 f"Project: {root_path}",
                 f"Package: {package or 'missing'}",
@@ -477,7 +477,7 @@ def cron_manage(
                 message=f"Queued manual trigger for '{job_name}' (event_id={event.id}).",
             )
             return render_runtime_summary(
-                "FX Cron Trigger Result",
+                "fx Cron Trigger Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),
@@ -501,7 +501,7 @@ def cron_manage(
                 ),
             )
             return render_runtime_summary(
-                "FX Cron Generate Result",
+                "fx Cron Generate Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),
@@ -529,7 +529,7 @@ def cron_manage(
             )
             if not success:
                 return render_runtime_summary(
-                    "FX Cron Apply Result",
+                    "fx Cron Apply Result",
                     fields=[
                         ("Status", "failure"),
                         ("Project", str(root_path)),
@@ -542,7 +542,7 @@ def cron_manage(
                     ],
                 )
             return render_runtime_summary(
-                "FX Cron Apply Result",
+                "fx Cron Apply Result",
                 fields=[
                     ("Status", "success"),
                     ("Project", str(root_path)),

@@ -1,5 +1,5 @@
 """
-Shared rendering helpers for FX command plugins.
+Shared rendering helpers for fx command plugins.
 """
 
 from __future__ import annotations
