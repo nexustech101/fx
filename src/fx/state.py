@@ -31,7 +31,7 @@ def resolve_root(root: str | Path | None = None) -> Path:
 def fx_home(root: str | Path | None = None) -> Path:
     root_path = resolve_root(root)
     base = root_path / ".fx"
-    legacy = root_path / ".functionals"
+    legacy = root_path / ".registers"
     if not base.exists() and legacy.exists():
         try:
             legacy.rename(base)

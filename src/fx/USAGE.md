@@ -10,7 +10,7 @@ underlying framework runtime (`registers.cli`, `registers.db`,
 `registers.cron`).
 
 Package rename note: framework install/import names are now `registers`
-(renamed from `functionals`/`decorates`).
+(renamed from `registers`/`registers`).
 
 ## Install
 
