@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fx-tool"
+version = "1.0.0"
+description = "Functionals FX project and DevOps operations CLI."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+authors = [
+    { name = "Charles DeFreese" }
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = [
+    "registers>=6.0.0",
+    "tqdm>=4.66,<5",
+]
+
+[project.scripts]
+fx = "fx.commands:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4,<8",
+    "pytest-cov>=4.1,<5",
+    "pytest-asyncio>=0.23,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/nexustech101/fx"
+Repository = "https://github.com/nexustech101/fx"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["fx*"]
+namespaces = true
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+
