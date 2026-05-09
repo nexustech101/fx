@@ -26,12 +26,22 @@ def _clear_fx_state_caches():
 def test_grouped_help_exposes_canonical_commands_only(capsys: pytest.CaptureFixture[str]) -> None:
     run(["--help"], print_result=False)
     out = capsys.readouterr().out
-    assert "project init" in out
-    assert "run api" in out
-    assert "package install" in out
-    assert "cron jobs" in out
-    assert "\n  init" not in out
+    assert "  project  Create and inspect fx projects" in out
+    assert "    init" in out
+    assert "  run  Run project entrypoints" in out
+    assert "    api" in out
+    assert "  package  Install, update, and pull packages" in out
+    assert "    install" in out
+    assert "  cron  Manage registers.cron projects" in out
+    assert "    jobs" in out
+    assert "\n  project init" not in out
     assert "module-add" not in out
+
+    run(["help", "project"], print_result=False)
+    project_help = capsys.readouterr().out
+    assert "Command group: project" in project_help
+    assert "  init" in project_help
+    assert "project init" not in project_help
 
 
 def test_version_option_returns_current_version() -> None:
