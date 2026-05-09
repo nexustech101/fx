@@ -51,6 +51,8 @@ class ProjectRecord(BaseModel):
     name: str
     root_path: str
     project_type: str = "cli"
+    package_name: str = "app"
+    layout: str = "src"
     created_at: str
     updated_at: str
 
@@ -87,66 +89,81 @@ class OperationRecord(BaseModel):
     created_at: str
 
 
-@lru_cache(maxsize=64)
-def _project_registry(db_file: str) -> DatabaseRegistry[ProjectRecord]:
-    return DatabaseRegistry(
-        ProjectRecord,
+def _registered_model(base: type[BaseModel], db_file: str) -> type[BaseModel]:
+    suffix = str(abs(hash((base.__name__, db_file))))
+    return type(f"{base.__name__}_{suffix}", (base,), {"__module__": base.__module__})
+
+
+def _manager(
+    *,
+    model: type[BaseModel],
+    db_file: str,
+    table_name: str,
+    unique_fields: list[str] | None = None,
+):
+    registry = DatabaseRegistry()
+    registered = registry.database_registry(
         db_file,
-        table_name="fx_projects",
+        table_name=table_name,
         key_field="id",
         autoincrement=True,
+        unique_fields=unique_fields or [],
+    )(_registered_model(model, db_file))
+    return registered.objects
+
+
+@lru_cache(maxsize=64)
+def _project_registry(db_file: str):
+    return _manager(
+        model=ProjectRecord,
+        db_file=db_file,
+        table_name="fx_projects",
         unique_fields=["root_path"],
     )
 
 
 @lru_cache(maxsize=64)
-def _module_registry(db_file: str) -> DatabaseRegistry[ModuleRecord]:
-    return DatabaseRegistry(
-        ModuleRecord,
-        db_file,
+def _module_registry(db_file: str):
+    return _manager(
+        model=ModuleRecord,
+        db_file=db_file,
         table_name="fx_modules",
-        key_field="id",
-        autoincrement=True,
         unique_fields=["package_path"],
     )
 
 
 @lru_cache(maxsize=64)
-def _plugin_registry(db_file: str) -> DatabaseRegistry[PluginRecord]:
-    return DatabaseRegistry(
-        PluginRecord,
-        db_file,
+def _plugin_registry(db_file: str):
+    return _manager(
+        model=PluginRecord,
+        db_file=db_file,
         table_name="fx_plugins",
-        key_field="id",
-        autoincrement=True,
         unique_fields=["alias"],
     )
 
 
 @lru_cache(maxsize=64)
-def _operation_registry(db_file: str) -> DatabaseRegistry[OperationRecord]:
-    return DatabaseRegistry(
-        OperationRecord,
-        db_file,
+def _operation_registry(db_file: str):
+    return _manager(
+        model=OperationRecord,
+        db_file=db_file,
         table_name="fx_operations",
-        key_field="id",
-        autoincrement=True,
     )
 
 
-def project_registry(root: str | Path | None = None) -> DatabaseRegistry[ProjectRecord]:
+def project_registry(root: str | Path | None = None):
     return _project_registry(str(control_db_path(root)))
 
 
-def module_registry(root: str | Path | None = None) -> DatabaseRegistry[ModuleRecord]:
+def module_registry(root: str | Path | None = None):
     return _module_registry(str(control_db_path(root)))
 
 
-def plugin_registry(root: str | Path | None = None) -> DatabaseRegistry[PluginRecord]:
+def plugin_registry(root: str | Path | None = None):
     return _plugin_registry(str(control_db_path(root)))
 
 
-def operation_registry(root: str | Path | None = None) -> DatabaseRegistry[OperationRecord]:
+def operation_registry(root: str | Path | None = None):
     return _operation_registry(str(control_db_path(root)))
 
 

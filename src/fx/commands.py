@@ -1,8 +1,5 @@
 """
 Public fx command surface.
-
-This module owns the fx command registry and runtime entrypoints. Command
-implementations are split into plugin modules under ``fx.plugins``.
 """
 
 from __future__ import annotations
@@ -15,29 +12,50 @@ from typing import Any
 from registers.cli.plugins import load_plugins
 from registers.cli.registry import CommandRegistry
 
-try:
-    from registers.cli.registry import MISSING  # type: ignore[attr-defined]
-except ImportError:
-    # Older/incompatible runtime builds may not export MISSING.
-    MISSING = object()
 
 _registry = CommandRegistry()
 _fx_DISTRIBUTION_NAME = "fx-tool"
 _PLUGINS_PACKAGE = "fx.plugins"
+
+project_group = _registry.group("project", description="Create and inspect fx projects")
+run_group = _registry.group("run", description="Run project entrypoints")
+module_group = _registry.group("module", description="Manage project modules")
+plugin_group = _registry.group("plugin", description="Manage project plugin links")
+package_group = _registry.group("package", description="Install, update, and pull packages")
+cron_group = _registry.group("cron", description="Manage registers.cron projects")
+
 _REQUIRED_COMMANDS = frozenset(
     {
-        "init",
-        "status",
-        "module",
-        "plugin",
+        "project init",
+        "project status",
+        "project health",
+        "project history",
+        "run auto",
+        "run cli",
+        "run api",
+        "run cron",
+        "module add",
+        "module list",
+        "module remove",
+        "plugin link",
+        "plugin list",
+        "plugin unlink",
+        "plugin sync",
+        "package install",
+        "package update",
+        "package pull",
+        "cron jobs",
+        "cron trigger",
+        "cron start",
+        "cron stop",
+        "cron status",
+        "cron workspace",
+        "cron register",
+        "cron workflows",
+        "cron run-workflow",
+        "cron generate",
+        "cron apply",
         "version",
-        "cron",
-        "run",
-        "install",
-        "update",
-        "pull",
-        "health",
-        "history",
     }
 )
 _plugins_lock = Lock()
@@ -55,46 +73,11 @@ def _resolve_fx_version() -> str:
 FX_VERSION = _resolve_fx_version()
 
 
-def argument(
-    name: str,
-    *,
-    type: Any = str,
-    help: str = "",
-    default: Any = MISSING,
-):
-    def decorator(fn):
-        if not hasattr(_registry, "stage_argument"):
-            raise RuntimeError(
-                "Incompatible 'registers' runtime: CommandRegistry.stage_argument is required."
-            )
-        _registry.stage_argument(fn, name, arg_type=type, help_text=help, default=default)
-        return fn
-
-    return decorator
-
-
-def option(flag: str, *, help: str = ""):
-    def decorator(fn):
-        if not hasattr(_registry, "stage_option"):
-            raise RuntimeError(
-                "Incompatible 'registers' runtime: CommandRegistry.stage_option is required."
-            )
-        _registry.stage_option(fn, flag, help_text=help)
-        return fn
-
-    return decorator
-
-
-def register(name: str | None = None, *, description: str = "", help: str = ""):
-    def decorator(fn):
-        if not hasattr(_registry, "finalize_command"):
-            raise RuntimeError(
-                "Incompatible 'registers' runtime: CommandRegistry.finalize_command is required."
-            )
-        _registry.finalize_command(fn, name=name, description=description, help_text=help)
-        return fn
-
-    return decorator
+@_registry.register("version", description="Show fx version")
+@_registry.option("--version", help="Show fx version")
+@_registry.option("-V", help="Show fx version")
+def show_version() -> str:
+    return f"fx {FX_VERSION}"
 
 
 def ensure_plugins_loaded() -> None:
@@ -110,7 +93,6 @@ def ensure_plugins_loaded() -> None:
             return
         if _plugin_load_error is not None:
             raise RuntimeError("fx command plugins failed to load.") from _plugin_load_error
-
         try:
             load_plugins(_PLUGINS_PACKAGE, _registry)
             missing = sorted(name for name in _REQUIRED_COMMANDS if not _registry.has(name))
@@ -134,7 +116,7 @@ def run(
     shell_banner: bool = True,
     shell_banner_text: str | None = None,
     shell_title: str = "fx",
-    shell_description: str = "Manage back-end projects, modules, and plugin structures built with registers.",
+    shell_description: str = "Manage registers projects, runtimes, packages, plugins, and cron jobs.",
     shell_colors: bool | None = None,
     shell_usage: bool = True,
 ) -> Any:
@@ -166,12 +148,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 __all__ = [
     "FX_VERSION",
-    "argument",
-    "option",
-    "register",
+    "cron_group",
     "ensure_plugins_loaded",
-    "run",
     "get_registry",
     "main",
+    "module_group",
+    "package_group",
+    "plugin_group",
+    "project_group",
+    "run",
+    "run_group",
 ]
-

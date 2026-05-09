@@ -26,7 +26,7 @@ from registers.cron.workspace import (
     register_workflow as register_cron_workflow,
     run_registered_workflow,
 )
-from fx.commands import argument, option, register
+from fx.commands import cron_group
 from fx.state import record_operation, resolve_root
 from fx.support import render_runtime_summary
 
@@ -77,20 +77,7 @@ def _sync_cron_jobs(root_path: Path) -> tuple[str | None, int, int]:
     return sync_project_jobs(root_path)
 
 
-@register(name="cron", description="Manage cron runtime, jobs, and deployment artifacts")
-@option("--cron")
-@argument("action", type=str, help="Action: start|stop|status|jobs|trigger|generate|apply|workspace|register|workflows|run-workflow")
-@argument("subject", type=str, default="", help="Root path or job name (trigger action)")
-@argument("root", type=str, default=".", help="Project root path")
-@argument("workers", type=int, default=4, help="Worker count for start action")
-@argument("foreground", type=bool, default=False, help="Run start in foreground mode")
-@argument("target", type=str, default="", help="Target filter for generate/apply")
-@argument("payload", type=str, default="", help="Optional JSON payload for trigger")
-@argument("workflow_file", type=str, default="", help="Workflow file path for register action")
-@argument("job", type=str, default="", help="Linked cron job name for register action")
-@argument("command", type=str, default="", help="Shell command for register/run-workflow actions")
-@argument("metadata", type=str, default="", help="Optional JSON metadata for workflow registration")
-def cron_manage(
+def _cron_dispatch(
     action: str,
     subject: str = "",
     root: str = ".",
@@ -566,4 +553,101 @@ def cron_manage(
             message=str(exc),
         )
         raise
+
+
+@cron_group.register("jobs", description="Discover and list project cron jobs")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+def cron_jobs(root: str = ".") -> str:
+    return _cron_dispatch("jobs", subject=root)
+
+
+@cron_group.register("trigger", description="Queue a manual cron job event")
+@cron_group.argument("root", type=str, help="Project root path")
+@cron_group.argument("job_name", type=str, help="Cron job name")
+@cron_group.argument("payload", type=str, default="", help="Optional JSON payload")
+def cron_trigger(root: str, job_name: str, payload: str = "") -> str:
+    return _cron_dispatch("trigger", subject=job_name, root=root, payload=payload)
+
+
+@cron_group.register("start", description="Start the cron runtime")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+@cron_group.argument("workers", type=int, default=4, help="Worker count")
+@cron_group.argument("foreground", type=bool, default=False, help="Run in foreground mode")
+def cron_start(root: str = ".", workers: int = 4, foreground: bool = False) -> str:
+    return _cron_dispatch("start", subject=root, workers=workers, foreground=foreground)
+
+
+@cron_group.register("stop", description="Stop the cron runtime")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+def cron_stop(root: str = ".") -> str:
+    return _cron_dispatch("stop", subject=root)
+
+
+@cron_group.register("status", description="Show cron runtime status")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+def cron_status(root: str = ".") -> str:
+    return _cron_dispatch("status", subject=root)
+
+
+@cron_group.register("workspace", description="Prepare cron workflow directories")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+def cron_workspace(root: str = ".") -> str:
+    return _cron_dispatch("workspace", subject=root)
+
+
+@cron_group.register("register", description="Register a named workflow")
+@cron_group.argument("root", type=str, help="Project root path")
+@cron_group.argument("workflow_name", type=str, help="Workflow name")
+@cron_group.argument("workflow_file", type=str, help="Workflow file path")
+@cron_group.argument("job", type=str, default="", help="Linked cron job name")
+@cron_group.argument("command", type=str, default="", help="Shell command")
+@cron_group.argument("target", type=str, default="", help="Scheduler/deployment target")
+@cron_group.argument("metadata", type=str, default="", help="Optional JSON metadata")
+def cron_register(
+    root: str,
+    workflow_name: str,
+    workflow_file: str,
+    job: str = "",
+    command: str = "",
+    target: str = "",
+    metadata: str = "",
+) -> str:
+    return _cron_dispatch(
+        "register",
+        subject=workflow_name,
+        root=root,
+        workflow_file=workflow_file,
+        job=job,
+        command=command,
+        target=target,
+        metadata=metadata,
+    )
+
+
+@cron_group.register("workflows", description="List registered workflows")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+def cron_workflows(root: str = ".") -> str:
+    return _cron_dispatch("workflows", subject=root)
+
+
+@cron_group.register("run-workflow", description="Run a registered workflow")
+@cron_group.argument("root", type=str, help="Project root path")
+@cron_group.argument("workflow_name", type=str, help="Workflow name")
+@cron_group.argument("payload", type=str, default="", help="Optional JSON payload")
+def cron_run_workflow(root: str, workflow_name: str, payload: str = "") -> str:
+    return _cron_dispatch("run-workflow", subject=workflow_name, root=root, payload=payload)
+
+
+@cron_group.register("generate", description="Generate cron deployment artifacts")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+@cron_group.argument("target", type=str, default="", help="Target filter")
+def cron_generate(root: str = ".", target: str = "") -> str:
+    return _cron_dispatch("generate", subject=root, target=target)
+
+
+@cron_group.register("apply", description="Apply cron deployment artifacts")
+@cron_group.argument("root", type=str, default=".", help="Project root path")
+@cron_group.argument("target", type=str, default="", help="Target filter")
+def cron_apply(root: str = ".", target: str = "") -> str:
+    return _cron_dispatch("apply", subject=root, target=target)
 
