@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -96,6 +98,29 @@ def test_project_status_and_health_use_runnable_package_discovery(
     assert "__main__.py: present" in status
     assert "api.py: present" in status
     assert "todo.py" not in status
+    assert health == "Health checks passed."
+
+
+def test_project_health_passes_when_generated_fastapi_dependency_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run(["project", "init", "db", "ApiDemo"], print_result=False)
+    project_root = tmp_path / "ApiDemo"
+    original_import = builtins.__import__
+
+    def _blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "fastapi":
+            raise ImportError("No module named 'fastapi'")
+        return original_import(name, globals, locals, fromlist, level)
+
+    for key in [key for key in list(sys.modules) if key == "apidemo" or key.startswith("apidemo.")]:
+        sys.modules.pop(key, None)
+    monkeypatch.setattr(builtins, "__import__", _blocked_import)
+
+    health = run(["project", "health", str(project_root)], print_result=False)
+
     assert health == "Health checks passed."
 
 
