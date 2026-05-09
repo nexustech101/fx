@@ -98,7 +98,7 @@ def _pyproject(
     layout: str,
     project_type: str,
 ) -> str:
-    dependencies = ['"registers>=6.1.0"']
+    dependencies = ['"registers>=7.2.0"']
     dev_dependencies = ['"pytest>=7.4"']
     if project_type == "db":
         dependencies.extend(['"fastapi>=0.111"', '"uvicorn>=0.30"'])
@@ -135,10 +135,13 @@ include = ["{package}*"]
 
 
 def _readme(project_name: str, package: str, project_type: str) -> str:
-    run_hint = "python -m uvicorn {package}.api:app" if project_type == "db" else f"python -m {package}"
+    run_hint = f"python -m uvicorn {package}.api:app" if project_type == "db" else f"python -m {package}"
     return f"""# {project_name}
 
 Minimal {project_type} project managed by `fx`.
+
+Install `registers[cli]` if you want Rich output, completion, history, and
+multiline shell input.
 
 ## Run
 
@@ -174,10 +177,24 @@ from registers import CommandRegistry
 
 
 cli = CommandRegistry()
+tools = cli.group("tools", description="Project utilities")
+
+
+@tools.register("hello", description="Print a greeting", examples=["tools hello Ada"])
+@tools.argument("name", type=str, default="world", help="Name to greet")
+def hello(name: str = "world") -> str:
+    return f"Hello, {{name}}!"
 
 
 def main() -> None:
-    cli.run(shell_title="{project_name}", shell_usage=True)
+    cli.run(
+        shell_title="{project_name}",
+        shell_usage=True,
+        rich=False,
+        completion=True,
+        history=True,
+        multiline=False,
+    )
 
 
 if __name__ == "__main__":
@@ -271,7 +288,12 @@ from . import jobs as _jobs
 
 def main() -> None:
     cron.install_cli()
-    cli.run(shell_title="{project_name} Automation", shell_usage=True)
+    cli.run(
+        shell_title="{project_name} Automation",
+        shell_usage=True,
+        completion=True,
+        history=True,
+    )
 
 
 if __name__ == "__main__":

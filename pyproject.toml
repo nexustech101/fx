@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fx-tool"
-version = "1.2.1"
+version = "1.2.2"
 description = "FX project and DevOps operations CLI."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -27,14 +27,17 @@ classifiers = [
 
 dependencies = [
     "registers>=7.2.0",
-    "tqdm>=4.66,<5",
 ]
 
 [project.scripts]
 fx = "fx.commands:main"
 
 [project.optional-dependencies]
+cli = [
+    "registers[cli]>=7.2.0",
+]
 dev = [
+    "registers[cli]>=7.2.0",
     "pytest>=7.4,<8",
     "pytest-cov>=4.1,<5",
     "pytest-asyncio>=0.23,<1",

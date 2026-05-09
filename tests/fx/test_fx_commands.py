@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import builtins
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import sys
 
 import pytest
 
-from registers.cli.exceptions import CommandExecutionError
+from registers.cli.exceptions import CommandExecutionError, DuplicateCommandError
 from registers.cron.state import clear_state_caches as clear_cron_state_caches
-from fx import run
-from fx.commands import FX_VERSION
+from fx import run, run_async
+from fx.commands import FX_VERSION, build_registry
 from fx.state import clear_state_caches, operation_registry, project_registry
 
 
@@ -48,13 +49,18 @@ def test_version_option_returns_current_version() -> None:
     assert run(["--version"], print_result=False) == f"fx {FX_VERSION}"
 
 
+async def test_run_async_supports_embedded_callers() -> None:
+    assert await run_async(["version"], print_result=False) == f"fx {FX_VERSION}"
+
+
 def test_project_init_cli_src_layout_is_bare_bones(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
 
     result = run(["project", "init", "cli", "Demo"], print_result=False)
 
     project_root = tmp_path / "Demo"
-    assert "Initialized cli project 'Demo'" in result
+    assert result["status"] == "success"
+    assert result["message"] == "Initialized cli project 'Demo'."
     assert (project_root / "src" / "demo" / "__main__.py").exists()
     assert (project_root / "src" / "demo" / "__init__.py").exists()
     assert (project_root / "pyproject.toml").exists()
@@ -82,12 +88,12 @@ def test_project_init_db_and_cron_root_layouts_are_minimal(tmp_path: Path, monke
 
     api_root = tmp_path / "ApiDemo"
     ops_root = tmp_path / "OpsDemo"
-    assert "Initialized db project" in db_result
+    assert db_result["message"] == "Initialized db project 'ApiDemo'."
     assert (api_root / "api_app" / "__main__.py").exists()
     assert (api_root / "api_app" / "api.py").exists()
     assert (api_root / "api_app" / "models.py").exists()
     assert "@app.post" not in (api_root / "api_app" / "api.py").read_text(encoding="utf-8")
-    assert "Initialized cron project" in cron_result
+    assert cron_result["message"] == "Initialized cron project 'OpsDemo'."
     assert (ops_root / "ops_app" / "__main__.py").exists()
     assert (ops_root / "ops_app" / "jobs.py").exists()
     assert "cron.install_cli()" in (ops_root / "ops_app" / "__main__.py").read_text(encoding="utf-8")
@@ -104,11 +110,12 @@ def test_project_status_and_health_use_runnable_package_discovery(
     status = run(["project", "status", str(project_root)], print_result=False)
     health = run(["project", "health", str(project_root)], print_result=False)
 
-    assert "Runnable packages: apidemo" in status
-    assert "__main__.py: present" in status
-    assert "api.py: present" in status
+    assert status["runnable_packages"] == ["apidemo"]
+    assert status["__main__.py"] == "present"
+    assert status["api.py"] == "present"
     assert "todo.py" not in status
-    assert health == "Health checks passed."
+    assert health["status"] == "success"
+    assert health["failures"] == []
 
 
 def test_project_health_passes_when_generated_fastapi_dependency_is_missing(
@@ -131,7 +138,8 @@ def test_project_health_passes_when_generated_fastapi_dependency_is_missing(
 
     health = run(["project", "health", str(project_root)], print_result=False)
 
-    assert health == "Health checks passed."
+    assert health["status"] == "success"
+    assert health["failures"] == []
 
 
 def test_run_api_uses_uvicorn_and_src_package_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,14 +152,15 @@ def test_run_api_uses_uvicorn_and_src_package_cwd(tmp_path: Path, monkeypatch: p
         calls.append((list(argv), cwd))
         return None
 
-    monkeypatch.setattr("fx.plugins.runtime.run_checked", _fake_run_checked)
+    monkeypatch.setattr("fx.command_sets.run.run_checked", _fake_run_checked)
 
     result = run(
         ["run", "api", str(project_root), "--host", "0.0.0.0", "--port", "9000", "--reload"],
         print_result=False,
     )
 
-    assert "fx Run Result" in result
+    assert result["status"] == "success"
+    assert result["mode"] == "api"
     argv, cwd = calls[-1]
     assert argv[1:4] == ["-m", "uvicorn", "apidemo.api:app"]
     assert "--reload" in argv
@@ -186,7 +195,7 @@ def test_run_package_override_resolves_ambiguous_project(
         calls.append((list(argv), cwd))
         return None
 
-    monkeypatch.setattr("fx.plugins.runtime.run_checked", _fake_run_checked)
+    monkeypatch.setattr("fx.command_sets.run.run_checked", _fake_run_checked)
 
     run(["run", "cli", ".", "--package", "beta"], print_result=False)
 
@@ -205,10 +214,19 @@ def test_module_and_plugin_grouped_commands_update_state(tmp_path: Path, monkeyp
     module_list = run(["module", "list", str(project_root)], print_result=False)
     plugin_list = run(["plugin", "list", str(project_root)], print_result=False)
 
-    assert "Added cli module 'users'" in module_result
-    assert "Linked plugin 'math_ops' -> math" in plugin_result
-    assert "users  (cli)  demo.plugins.users" in module_list
-    assert "math_ops  ->  math  (enabled)" in plugin_list
+    assert module_result["message"] == "Added cli module 'users'."
+    assert plugin_result["message"] == "Linked plugin 'math_ops' -> math"
+    assert module_list == [
+        {
+            "module_name": "users",
+            "module_type": "cli",
+            "package_path": "demo.plugins.users",
+            "entry_file": str(project_root / "src" / "demo" / "plugins" / "users" / "commands.py"),
+        }
+    ]
+    linked_plugin = next(row for row in plugin_list if row["alias"] == "math_ops")
+    assert linked_plugin["package_path"] == "math"
+    assert linked_plugin["enabled"] is True
 
 
 def test_package_install_and_update_build_commands(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -221,7 +239,7 @@ def test_package_install_and_update_build_commands(tmp_path: Path, monkeypatch: 
         calls.append(list(argv))
         return None
 
-    monkeypatch.setattr("fx.plugins.runtime.run_checked", _fake_run_checked)
+    monkeypatch.setattr("fx.command_sets.package.run_checked", _fake_run_checked)
 
     run(["package", "install", str(project_root), "--extras", "dev"], print_result=False)
     run(["package", "update", str(project_root), "--package", "registers"], print_result=False)
@@ -243,13 +261,21 @@ def test_package_pull_syncs_plugins(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     class _Clone:
         repo_path: Path
 
-    monkeypatch.setattr("fx.plugins.runtime.clone_repo", lambda **_kwargs: _Clone(checkout))
+    monkeypatch.setattr("fx.command_sets.package.clone_repo", lambda **_kwargs: _Clone(checkout))
 
     result = run(["package", "pull", str(project_root), str(checkout)], print_result=False)
     plugin_list = run(["plugin", "list", str(project_root)], print_result=False)
 
-    assert "fx Package Pull Result" in result
-    assert "alpha  ->  demo.plugins.alpha  (enabled)" in plugin_list
+    assert result["status"] == "success"
+    assert result["created"] == ["alpha"]
+    assert plugin_list == [
+        {
+            "alias": "alpha",
+            "package_path": "demo.plugins.alpha",
+            "enabled": True,
+            "link_file": str(project_root / "src" / "demo" / "plugins" / "alpha" / "__init__.py"),
+        }
+    ]
 
 
 def test_cron_grouped_commands_and_cron_project_surface(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -273,9 +299,9 @@ def test_cron_grouped_commands_and_cron_project_surface(tmp_path: Path, monkeypa
     jobs = run(["cron", "jobs", str(project_root)], print_result=False)
     trigger = run(["cron", "trigger", str(project_root), "sync-cache"], print_result=False)
 
-    assert "fx Cron Jobs Result" in jobs
-    assert "sync-cache" in jobs
-    assert "fx Cron Trigger Result" in trigger
+    assert jobs[0]["name"] == "sync-cache"
+    assert trigger["status"] == "success"
+    assert trigger["job"] == "sync-cache"
 
 
 def test_failed_run_records_operation_history(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -290,3 +316,84 @@ def test_failed_run_records_operation_history(tmp_path: Path, monkeypatch: pytes
     assert rows
     assert rows[0].command == "run api"
     assert rows[0].status == "failure"
+
+
+def test_global_root_context_and_output_modes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run(["project", "init", "cli", "Demo"], print_result=False)
+    project_root = tmp_path / "Demo"
+
+    status = run(["--root", str(project_root), "project", "status"], print_result=False)
+    assert status["root"] == str(project_root)
+    assert status["runnable_packages"] == ["demo"]
+
+    run(["--root", str(project_root), "project", "status", "--output", "json"])
+    rendered = capsys.readouterr().out
+    assert json.loads(rendered)["package"] == "demo"
+
+    run(["module", "add", str(project_root), "cli", "users"], print_result=False)
+    run(["module", "list", str(project_root), "--output", "csv"])
+    csv_out = capsys.readouterr().out
+    assert "module_name,module_type,package_path,entry_file" in csv_out
+    assert "users,cli,demo.plugins.users" in csv_out
+
+
+def test_dry_run_and_confirmation_safety(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run(["project", "init", "cli", "Demo"], print_result=False)
+    project_root = tmp_path / "Demo"
+
+    dry_run = run(["module", "add", str(project_root), "cli", "users", "--dry-run"], print_result=False)
+    assert dry_run["status"] == "dry-run"
+    assert run(["module", "list", str(project_root)], print_result=False) == []
+
+    run(["module", "add", str(project_root), "cli", "users"], print_result=False)
+    with pytest.raises(SystemExit) as exc_info:
+        run(["module", "remove", str(project_root), "users"], print_result=False)
+    assert exc_info.value.code == 2
+    assert run(["module", "list", str(project_root)], print_result=False)[0]["module_name"] == "users"
+
+    removed = run(["module", "remove", str(project_root), "users", "--force"], print_result=False)
+    assert removed["status"] == "success"
+    assert run(["module", "list", str(project_root)], print_result=False) == []
+
+
+def test_json_parse_failures_exit_with_parse_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run(["project", "init", "cron", "Ops"], print_result=False)
+    project_root = tmp_path / "Ops"
+
+    with pytest.raises(SystemExit) as exc_info:
+        run(["cron", "trigger", str(project_root), "sync-cache", "--payload", "{bad"], print_result=False)
+    assert exc_info.value.code == 2
+
+
+def test_shell_builtins_use_grouped_registry(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    commands = iter(["commands", "help project", "exit"])
+
+    def input_fn(prompt: str) -> str:
+        return next(commands)
+
+    run(["--interactive"], print_result=False, shell_input_fn=input_fn, shell_banner=False)
+    out = capsys.readouterr().out
+    assert "project init" in out
+    assert "Command group: project" in out
+
+
+def test_registry_duplicate_commands_fail_fast() -> None:
+    registry = build_registry()
+
+    with pytest.raises(DuplicateCommandError):
+        registry.register("version")(lambda: "duplicate")

@@ -6,66 +6,23 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError, version as resolve_distribution_version
-from threading import Lock
+from pathlib import Path
 from typing import Any
 
-from registers.cli.plugins import load_plugins
-from registers.cli.registry import CommandRegistry
+from registers import CommandRegistry
+
+from fx.command_sets import register_all
+from fx.context import FxContext
+from fx.state import resolve_root
 
 
-_registry = CommandRegistry()
-_fx_DISTRIBUTION_NAME = "fx-tool"
-_PLUGINS_PACKAGE = "fx.plugins"
-
-project_group = _registry.group("project", description="Create and inspect fx projects")
-run_group = _registry.group("run", description="Run project entrypoints")
-module_group = _registry.group("module", description="Manage project modules")
-plugin_group = _registry.group("plugin", description="Manage project plugin links")
-package_group = _registry.group("package", description="Install, update, and pull packages")
-cron_group = _registry.group("cron", description="Manage registers.cron projects")
-
-_REQUIRED_COMMANDS = frozenset(
-    {
-        "project init",
-        "project status",
-        "project health",
-        "project history",
-        "run auto",
-        "run cli",
-        "run api",
-        "run cron",
-        "module add",
-        "module list",
-        "module remove",
-        "plugin link",
-        "plugin list",
-        "plugin unlink",
-        "plugin sync",
-        "package install",
-        "package update",
-        "package pull",
-        "cron jobs",
-        "cron trigger",
-        "cron start",
-        "cron stop",
-        "cron status",
-        "cron workspace",
-        "cron register",
-        "cron workflows",
-        "cron run-workflow",
-        "cron generate",
-        "cron apply",
-        "version",
-    }
-)
-_plugins_lock = Lock()
-_plugins_loaded = False
-_plugin_load_error: Exception | None = None
+_FX_DISTRIBUTION_NAME = "fx-tool"
+_SHELL_DESCRIPTION = "Manage registers projects, runtimes, packages, plugins, and cron jobs."
 
 
 def _resolve_fx_version() -> str:
     try:
-        return resolve_distribution_version(_fx_DISTRIBUTION_NAME)
+        return resolve_distribution_version(_FX_DISTRIBUTION_NAME)
     except PackageNotFoundError:
         return "dev"
 
@@ -73,38 +30,35 @@ def _resolve_fx_version() -> str:
 FX_VERSION = _resolve_fx_version()
 
 
-@_registry.register("version", description="Show fx version")
-@_registry.option("--version", help="Show fx version")
-@_registry.option("-V", help="Show fx version")
-def show_version() -> str:
-    return f"fx {FX_VERSION}"
+def build_registry() -> CommandRegistry:
+    registry = CommandRegistry()
+
+    @registry.context_factory
+    def build_context(root: str = ".") -> FxContext:
+        return FxContext(root=resolve_root(root), cwd=Path.cwd().resolve(), version=FX_VERSION)
+
+    @registry.register(
+        "version",
+        description="Show fx version",
+        tags=["meta"],
+        examples=["version", "--version", "-V"],
+    )
+    @registry.option("--version", help="Show fx version")
+    @registry.option("-V", help="Show fx version")
+    def show_version() -> str:
+        return f"fx {FX_VERSION}"
+
+    register_all(registry)
+    return registry
+
+
+_registry = build_registry()
 
 
 def ensure_plugins_loaded() -> None:
-    global _plugins_loaded, _plugin_load_error
+    """Compatibility no-op for callers from the plugin-loading era."""
 
-    if _plugins_loaded:
-        return
-    if _plugin_load_error is not None:
-        raise RuntimeError("fx command plugins failed to load.") from _plugin_load_error
-
-    with _plugins_lock:
-        if _plugins_loaded:
-            return
-        if _plugin_load_error is not None:
-            raise RuntimeError("fx command plugins failed to load.") from _plugin_load_error
-        try:
-            load_plugins(_PLUGINS_PACKAGE, _registry)
-            missing = sorted(name for name in _REQUIRED_COMMANDS if not _registry.has(name))
-            if missing:
-                raise RuntimeError(
-                    "fx command plugins loaded incompletely. Missing commands: "
-                    + ", ".join(missing)
-                )
-            _plugins_loaded = True
-        except Exception as exc:
-            _plugin_load_error = exc
-            raise
+    return None
 
 
 def run(
@@ -116,11 +70,22 @@ def run(
     shell_banner: bool = True,
     shell_banner_text: str | None = None,
     shell_title: str = "fx",
-    shell_description: str = "Manage registers projects, runtimes, packages, plugins, and cron jobs.",
+    shell_description: str = _SHELL_DESCRIPTION,
     shell_colors: bool | None = None,
     shell_usage: bool = True,
+    rich: bool = False,
+    theme: Any | None = None,
+    output: str | None = None,
+    quiet: bool = False,
+    verbose: bool = False,
+    no_color: bool = False,
+    completion: bool = False,
+    history: bool = False,
+    multiline: bool = False,
+    log_level: str | int | None = None,
+    log_panel: bool = False,
+    event_loop: Any | None = None,
 ) -> Any:
-    ensure_plugins_loaded()
     return _registry.run(
         argv,
         print_result=print_result,
@@ -133,11 +98,47 @@ def run(
         shell_version=f"Version: {FX_VERSION}",
         shell_colors=shell_colors,
         shell_usage=shell_usage,
+        rich=rich,
+        theme=theme,
+        output=output,
+        quiet=quiet,
+        verbose=verbose,
+        no_color=no_color,
+        completion=completion,
+        history=history,
+        multiline=multiline,
+        log_level=log_level,
+        log_panel=log_panel,
+        event_loop=event_loop,
+    )
+
+
+async def run_async(
+    argv: Sequence[str] | None = None,
+    *,
+    print_result: bool = True,
+    rich: bool = False,
+    output: str | None = None,
+    quiet: bool = False,
+    verbose: bool = False,
+    no_color: bool = False,
+    shell_input_fn=None,
+    log_level: str | int | None = None,
+) -> Any:
+    return await _registry.run_async(
+        argv,
+        print_result=print_result,
+        rich=rich,
+        output=output,
+        quiet=quiet,
+        verbose=verbose,
+        no_color=no_color,
+        shell_input_fn=shell_input_fn,
+        log_level=log_level,
     )
 
 
 def get_registry() -> CommandRegistry:
-    ensure_plugins_loaded()
     return _registry
 
 
@@ -148,14 +149,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 __all__ = [
     "FX_VERSION",
-    "cron_group",
+    "build_registry",
     "ensure_plugins_loaded",
     "get_registry",
     "main",
-    "module_group",
-    "package_group",
-    "plugin_group",
-    "project_group",
     "run",
-    "run_group",
+    "run_async",
 ]

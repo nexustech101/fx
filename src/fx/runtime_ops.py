@@ -4,37 +4,20 @@ Runtime/process helpers for ``fx`` commands.
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from dataclasses import dataclass
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from typing import Any, Iterator, Sequence
+from typing import Sequence
 import venv
-
-try:  # pragma: no cover - optional dependency
-    from tqdm import tqdm as _tqdm
-except Exception:  # pragma: no cover - optional dependency
-    _tqdm = None
 
 
 @dataclass(frozen=True)
 class CommandResult:
     argv: tuple[str, ...]
     returncode: int
-
-
-class _NullProgress:
-    def update(self, _: int = 1) -> None:
-        return None
-
-    def set_postfix_str(self, _: str) -> None:
-        return None
-
-    def close(self) -> None:
-        return None
 
 
 def run_command(argv: Sequence[str], *, cwd: Path | None = None) -> CommandResult:
@@ -49,30 +32,6 @@ def run_checked(argv: Sequence[str], *, cwd: Path | None = None) -> CommandResul
             f"Command failed with exit code {result.returncode}: {' '.join(result.argv)}"
         )
     return result
-
-
-def _stderr_is_tty() -> bool:
-    stream = getattr(sys, "stderr", None)
-    isatty = getattr(stream, "isatty", None)
-    if not callable(isatty):
-        return False
-    try:
-        return bool(isatty())
-    except Exception:
-        return False
-
-
-@contextmanager
-def progress_steps(*, total: int, desc: str) -> Iterator[Any]:
-    if total <= 0 or _tqdm is None or not _stderr_is_tty():
-        yield _NullProgress()
-        return
-
-    progress = _tqdm(total=total, desc=desc, unit="step", leave=False, dynamic_ncols=True)
-    try:
-        yield progress
-    finally:
-        progress.close()
 
 
 def normalize_extras(extras: str) -> str:
